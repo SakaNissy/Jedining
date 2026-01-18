@@ -3,181 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>原価管理くん</title>
+    <title>店舗別原価管理システム</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2652/2652180.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
-    </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body>
     <div id="root"></div>
-
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { Plus, Trash2, ChefHat, Package, Calculator, ArrowRight, X } = lucide;
-
-        const App = () => {
-            const [materials, setMaterials] = useState(() => {
-                const saved = localStorage.getItem('cost-data');
-                return saved ? JSON.parse(saved) : [];
-            });
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [formData, setFormData] = useState({ name: '', price: '', weight: '' });
-
-            useEffect(() => {
-                localStorage.setItem('cost-data', JSON.stringify(materials));
-            }, [materials]);
-
-            const handleAdd = (e) => {
-                e.preventDefault();
-                if (!formData.name || !formData.price || !formData.weight) return;
-                
-                const unitPrice = Number(formData.price) / Number(formData.weight);
-                setMaterials([...materials, { 
-                    id: Date.now(), 
-                    ...formData, 
-                    unitPrice 
-                }]);
-                setFormData({ name: '', price: '', weight: '' });
-                setIsModalOpen(false);
-            };
-
-            const deleteItem = (id) => {
-                setMaterials(materials.filter(m => m.id !== id));
-            };
-
-            return (
-                <div className="min-h-screen max-w-md mx-auto bg-white flex flex-col shadow-xl">
-                    {/* ヘッダー */}
-                    <header className="bg-indigo-600 text-white p-6 rounded-b-3xl shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-2">
-                                <ChefHat size={28} />
-                                <h1 className="text-xl font-black tracking-tight">原価管理くん</h1>
-                            </div>
-                        </div>
-                        <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
-                            <p className="text-xs opacity-80 mb-1">登録済みの材料数</p>
-                            <p className="text-3xl font-bold">{materials.length} <span className="text-sm font-normal">品目</span></p>
-                        </div>
-                    </header>
-
-                    {/* リスト部分 */}
-                    <main className="flex-1 p-6 overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="font-bold text-gray-500 text-sm">材料リスト</h2>
-                        </div>
-
-                        {materials.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-gray-300">
-                                <Package size={64} strokeWidth={1} className="mb-4 opacity-20" />
-                                <p>まだ材料がありません</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {materials.map(item => (
-                                    <div key={item.id} className="bg-white border border-gray-100 p-4 rounded-2xl card-shadow flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-800">{item.name}</h3>
-                                            <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
-                                                    ¥{item.price} / {item.weight}g
-                                                </span>
-                                                <span className="text-sm font-black text-indigo-600">
-                                                    1g = ¥{item.unitPrice.toFixed(2)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-400 p-2 transition-colors">
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </main>
-
-                    {/* 追加ボタン */}
-                    <div className="p-6 sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent">
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                            <Plus size={20} />
-                            材料を追加する
-                        </button>
-                    </div>
-
-                    {/* 入力モーダル */}
-                    {isModalOpen && (
-                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-                            <div className="bg-white w-full max-w-sm rounded-3xl p-6 animate-in slide-in-from-bottom-full duration-300">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold flex items-center gap-2">
-                                        <Calculator className="text-indigo-600" />
-                                        新しい材料
-                                    </h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 p-1">
-                                        <X size={24} />
-                                    </button>
-                                </div>
-                                <form onSubmit={handleAdd} className="space-y-4">
-                                    <div>
-                                        <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">材料名</label>
-                                        <input 
-                                            autoFocus
-                                            className="w-full bg-gray-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                                            placeholder="例: 鶏もも肉"
-                                            value={formData.name}
-                                            onChange={e => setFormData({...formData, name: e.target.value})}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">仕入れ価格 (円)</label>
-                                            <input 
-                                                type="number"
-                                                className="w-full bg-gray-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                                                placeholder="1200"
-                                                value={formData.price}
-                                                onChange={e => setFormData({...formData, price: e.target.value})}
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">内容量 (g/ml)</label>
-                                            <input 
-                                                type="number"
-                                                className="w-full bg-gray-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                                                placeholder="1000"
-                                                value={formData.weight}
-                                                onChange={e => setFormData({...formData, weight: e.target.value})}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 mt-4 shadow-lg shadow-indigo-200">
-                                        登録する
-                                        <ArrowRight size={18} />
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
+        // アプリ起動確認用
+        const App = () => (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="text-center p-8 bg-white rounded-3xl shadow-xl">
+                    <h1 className="text-xl font-bold">アプリが正常に起動しました！</h1>
+                    <p className="text-sm text-slate-500 mt-2">Firebaseの設定を反映させて本番運用を開始しましょう。</p>
                 </div>
-            );
-        };
-
+            </div>
+        );
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    <\/script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
