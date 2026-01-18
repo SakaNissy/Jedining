@@ -2,161 +2,141 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JEDINING 原価管理</title>
-    <!-- Tailwind CSS for styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JEDINING - Fullscreen Edition</title>
+    
+    <!-- モバイルアプリ化の設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+        body {
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+            overscroll-behavior-y: contain; /* スクロール時のバウンス抑制 */
+        }
+        /* スクロールバーを隠す（デザイン優先） */
+        ::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen">
-    <div id="root"></div>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
 
-    <!-- React and Firebase SDKs -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-lg relative">
+        <!-- ヘッダー -->
+        <header class="bg-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md">
+            <h1 class="text-xl font-bold text-center">JEDINING</h1>
+        </header>
 
+        <!-- メインコンテンツ -->
+        <main class="flex-grow p-4 pb-24">
+            <div id="status" class="mb-4 p-2 text-sm text-center rounded bg-yellow-100 hidden">接続中...</div>
+            
+            <div class="space-y-4">
+                <section class="bg-gray-100 p-4 rounded-xl">
+                    <h2 class="font-bold mb-2">新規登録</h2>
+                    <input type="text" id="itemName" placeholder="料理名やメモ" class="w-full p-3 border rounded-lg mb-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <button id="saveBtn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold active:scale-95 transition-transform">保存する</button>
+                </section>
+
+                <section>
+                    <h2 class="font-bold mb-2">リスト</h2>
+                    <ul id="itemList" class="space-y-2">
+                        <!-- リストアイテムがここに表示されます -->
+                    </ul>
+                </section>
+            </div>
+        </main>
+
+        <!-- 全画面切り替えボタン（右下固定） -->
+        <button id="fullscreenBtn" class="fixed bottom-6 right-6 bg-gray-800 text-white p-3 rounded-full shadow-2xl opacity-70 hover:opacity-100 z-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+    </div>
+
+    <!-- Firebase SDK -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+        // --- あなたのFirebase設定をここに貼り付けてください ---
         const firebaseConfig = {
-  apiKey: "AIzaSyAIKfiw6uFGQOYGMbsmIuZClf8zvVw1sXI",
-  authDomain: "jedining-ab069.firebaseapp.com",
-  projectId: "jedining-ab069",
-  storageBucket: "jedining-ab069.firebasestorage.app",
-  messagingSenderId: "691552810598",
-  appId: "1:691552810598:web:69f9e70c8eba31198a5fa7",
-  measurementId: "G-GP4DVVCYFC"
-};
+            apiKey: "", 
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+        // --------------------------------------------------
 
-
-        // Firebaseの初期化
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const menuCollection = collection(db, "menu_items");
+        const collectionRef = collection(db, "items");
 
-        // Reactコンポーネント
-        const { useState, useEffect } = React;
-        const { Plus, Trash2, ChefHat, Calculator, TrendingUp } = lucide;
+        const itemNameInput = document.getElementById('itemName');
+        const saveBtn = document.getElementById('saveBtn');
+        const itemList = document.getElementById('itemList');
+        const status = document.getElementById('status');
 
-        function App() {
-            const [items, setItems] = useState([]);
-            const [name, setName] = useState('');
-            const [cost, setCost] = useState('');
-            const [price, setPrice] = useState('');
-
-            // データのリアルタイム読み込み
-            useEffect(() => {
-                const q = query(menuCollection, orderBy("timestamp", "desc"));
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setItems(data);
+        // 保存機能
+        saveBtn.onclick = async () => {
+            const name = itemNameInput.value.trim();
+            if (!name) return;
+            
+            saveBtn.disabled = true;
+            try {
+                await addDoc(collectionRef, {
+                    name: name,
+                    createdAt: serverTimestamp()
                 });
-                return () => unsubscribe();
-            }, []);
+                itemNameInput.value = "";
+            } catch (e) {
+                console.error(e);
+                alert("エラーが発生しました");
+            }
+            saveBtn.disabled = false;
+        };
 
-            // 保存処理
-            const saveItem = async (e) => {
-                e.preventDefault();
-                if (!name || !cost || !price) return;
-                
-                const margin = Number(price) - Number(cost);
-                const marginRate = ((margin / Number(price)) * 100).toFixed(1);
+        // リアルタイム読み込み
+        onSnapshot(query(collectionRef), (snapshot) => {
+            itemList.innerHTML = "";
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const li = document.createElement('li');
+                li.className = "p-3 bg-white border-b flex justify-between items-center animate-fade-in";
+                li.textContent = data.name;
+                itemList.appendChild(li);
+            });
+            status.classList.add('hidden');
+        }, (error) => {
+            status.textContent = "接続エラー: ルールの設定を確認してください";
+            status.classList.remove('hidden');
+        });
 
-                await addDoc(menuCollection, {
-                    name,
-                    cost: Number(cost),
-                    price: Number(price),
-                    margin,
-                    marginRate,
-                    timestamp: new Date()
+        // 全画面切り替えロジック
+        const fsBtn = document.getElementById('fullscreenBtn');
+        fsBtn.onclick = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(e => {
+                    alert(`全画面に切り替えられません: ${e.message}`);
                 });
+            } else {
+                document.exitFullscreen();
+            }
+        };
 
-                setName(''); setCost(''); setPrice('');
-                lucide.createIcons();
-            };
-
-            // 削除処理
-            const deleteItem = async (id) => {
-                if(confirm("このデータを削除しますか？")) {
-                    await deleteDoc(doc(db, "menu_items", id));
-                }
-            };
-
-            return (
-                <div className="max-w-md mx-auto min-h-screen flex flex-col pb-10">
-                    <header className="bg-indigo-600 text-white p-6 rounded-b-[2rem] shadow-xl mb-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <ChefHat size={28} />
-                            <h1 className="text-2xl font-black italic">JEDINING COST</h1>
-                        </div>
-                        <p className="text-indigo-100 text-sm opacity-80 font-medium tracking-wide">原価・利益管理システム</p>
-                    </header>
-
-                    <main className="px-4 space-y-6">
-                        {/* 入力フォーム */}
-                        <form onSubmit={saveItem} className="bg-white p-6 rounded-3xl shadow-sm space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Plus size={18} className="text-indigo-600" />
-                                <h2 className="font-bold text-slate-700">新規登録</h2>
-                            </div>
-                            <input 
-                                type="text" placeholder="メニュー名" value={name} onChange={e=>setName(e.target.value)}
-                                class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                                <input 
-                                    type="number" placeholder="原価 (¥)" value={cost} onChange={e=>setCost(e.target.value)}
-                                    class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                                />
-                                <input 
-                                    type="number" placeholder="売価 (¥)" value={price} onChange={e=>setPrice(e.target.value)}
-                                    class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                                />
-                            </div>
-                            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 active:scale-95 transition-all">
-                                データを保存する
-                            </button>
-                        </form>
-
-                        {/* リスト表示 */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between px-2">
-                                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">登録済みメニュー</h2>
-                                <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded-full">{items.length}件</span>
-                            </div>
-                            {items.map(item => (
-                                <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-50 flex justify-between items-center group">
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-800">{item.name}</h3>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <span className="text-xs text-slate-400">¥{item.cost.toLocaleString()} → ¥{item.price.toLocaleString()}</span>
-                                            <div className="flex items-center gap-1 text-emerald-600 font-black text-sm">
-                                                <TrendingUp size={14} />
-                                                <span>{item.marginRate}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => deleteItem(item.id)} className="text-slate-200 hover:text-rose-400 p-2 transition-colors">
-                                        <Trash2 size={20} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </main>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // iOS等のホーム画面追加後にURLバーを隠すヒント
+        window.addEventListener("load", () => {
+            setTimeout(() => window.scrollTo(0, 1), 100);
+        });
     </script>
 </body>
 </html>
