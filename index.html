@@ -3,70 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>JEDINING - Fullscreen Edition</title>
-    
-    <!-- モバイルアプリ化の設定 -->
+    <title>JEDINING | 原価・発注管理</title>
+
+    <!-- PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/000000/shop.png">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkpFRElOSU5HIOWOn-S+oeODu-eZuuazqCIsCiAgInNob3J0X25hbWUiIjogIkpFRElOSU5HIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmOWZhZmIiLAogICJ0aGVtZV9jb2xvciI6ICIjNGY0NmUxIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pbWcuaWNvbnM4LmNvbS9jb2xvci8xOTIvMDAwMDAwL3Nob3AyLnBuZyIsCiAgICAgICJzcmVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXQp9">
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        :root {
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-        body {
-            padding-top: var(--safe-top);
-            padding-bottom: var(--safe-bottom);
-            overscroll-behavior-y: contain; /* スクロール時のバウンス抑制 */
-        }
-        /* スクロールバーを隠す（デザイン優先） */
-        ::-webkit-scrollbar {
-            display: none;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .safe-area-inset-top { padding-top: env(safe-area-inset-top); }
+        .active-tab { color: #4f46e5; border-bottom: 3px solid #4f46e5; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+<body class="bg-slate-50 min-h-screen pb-24 text-slate-800">
 
-    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-lg relative">
-        <!-- ヘッダー -->
-        <header class="bg-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md">
-            <h1 class="text-xl font-bold text-center">JEDINING</h1>
-        </header>
-
-        <!-- メインコンテンツ -->
-        <main class="flex-grow p-4 pb-24">
-            <div id="status" class="mb-4 p-2 text-sm text-center rounded bg-yellow-100 hidden">接続中...</div>
-            
-            <div class="space-y-4">
-                <section class="bg-gray-100 p-4 rounded-xl">
-                    <h2 class="font-bold mb-2">新規登録</h2>
-                    <input type="text" id="itemName" placeholder="料理名やメモ" class="w-full p-3 border rounded-lg mb-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <button id="saveBtn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold active:scale-95 transition-transform">保存する</button>
-                </section>
-
-                <section>
-                    <h2 class="font-bold mb-2">リスト</h2>
-                    <ul id="itemList" class="space-y-2">
-                        <!-- リストアイテムがここに表示されます -->
-                    </ul>
-                </section>
-            </div>
-        </main>
-
-        <!-- 全画面切り替えボタン（右下固定） -->
-        <button id="fullscreenBtn" class="fixed bottom-6 right-6 bg-gray-800 text-white p-3 rounded-full shadow-2xl opacity-70 hover:opacity-100 z-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-        </button>
+    <!-- Loading Screen -->
+    <div id="loader" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
+        <p class="mt-4 text-slate-500 font-bold">システムを同期中...</p>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50 safe-area-inset-top">
+        <div class="max-w-md mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-black flex items-center gap-2">
+                <i data-lucide="layout-grid"></i> JEDINING
+            </h1>
+            <div id="status-badge" class="bg-indigo-500 text-xs px-3 py-1 rounded-full border border-indigo-400">
+                接続中
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- Tabs -->
+        <nav class="flex bg-white rounded-2xl shadow-sm border p-1 sticky top-20 z-40">
+            <button onclick="showView('inventory')" id="tab-inventory" class="flex-1 py-3 text-sm font-bold active-tab transition-all flex flex-col items-center">
+                <i data-lucide="package" class="w-4 h-4 mb-1"></i> 在庫
+            </button>
+            <button onclick="showView('cost')" id="tab-cost" class="flex-1 py-3 text-sm font-bold text-slate-400 transition-all flex flex-col items-center">
+                <i data-lucide="calculator" class="w-4 h-4 mb-1"></i> 原価
+            </button>
+            <button onclick="showView('settings')" id="tab-settings" class="flex-1 py-3 text-sm font-bold text-slate-400 transition-all flex flex-col items-center">
+                <i data-lucide="settings" class="w-4 h-4 mb-1"></i> 設定
+            </button>
+        </nav>
+
+        <!-- View: Inventory -->
+        <section id="view-inventory" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-black text-lg text-slate-600">在庫・発注リスト</h2>
+                <button onclick="openModal()" class="bg-indigo-600 text-white p-2 rounded-xl shadow-lg active:scale-95 transition">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            <div id="item-list" class="space-y-3">
+                <!-- Data Rendered Here -->
+            </div>
+        </section>
+
+        <!-- View: Cost Simulation -->
+        <section id="view-cost" class="hidden space-y-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h2 class="font-black text-lg mb-4">メニュー原価計算</h2>
+                <div class="space-y-4">
+                    <input type="text" id="recipe-name" placeholder="メニュー名（例: ハンバーグ）" class="w-full bg-slate-50 border-none rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500">
+                    
+                    <div id="recipe-items" class="space-y-2">
+                        <!-- Recipe rows added here -->
+                    </div>
+
+                    <button onclick="addRecipeRow()" class="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm font-bold hover:bg-slate-50 transition flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 材料を追加
+                    </button>
+
+                    <div class="mt-6 p-6 bg-slate-900 rounded-3xl text-white shadow-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-slate-400 font-bold">合計原価</span>
+                            <span id="total-cost" class="text-3xl font-black text-indigo-400">¥0</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-4 border-t border-slate-700">
+                            <span class="text-slate-400 font-bold">原価率</span>
+                            <div class="text-right">
+                                <input type="number" id="sale-price" value="1000" oninput="calculateTotal()" class="w-24 bg-transparent text-right border-b border-slate-600 focus:border-indigo-400 outline-none text-xl font-black">
+                                <span class="text-xs text-slate-500 block">円で販売時</span>
+                                <div id="cost-ratio" class="text-2xl font-black text-emerald-400">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Settings -->
+        <section id="view-settings" class="hidden space-y-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h2 class="font-black text-lg mb-6 text-slate-700 text-center">システム設定</h2>
+                <div class="space-y-3">
+                    <button onclick="exportCSV()" class="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 active:bg-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-emerald-100 text-emerald-600 p-2 rounded-xl"><i data-lucide="download"></i></div>
+                            <span class="font-bold">発注リスト出力 (CSV)</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i>
+                    </button>
+                    <div class="p-4 bg-indigo-50 rounded-2xl">
+                        <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">現在の店舗ID</p>
+                        <p id="display-user-id" class="text-xs font-mono text-indigo-700 break-all">---</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Add Item -->
+    <div id="modal" class="fixed inset-0 z-[60] bg-black/60 hidden items-end sm:items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-t-[32px] sm:rounded-[32px] p-8 shadow-2xl animate-in slide-in-from-bottom duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-title" class="text-xl font-black">商品の追加</h3>
+                <button onclick="closeModal()" class="text-slate-300 p-2"><i data-lucide="x"></i></button>
+            </div>
+            
+            <input type="hidden" id="edit-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">商品名</label>
+                    <input type="text" id="item-name" class="w-full bg-slate-50 border-none rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="例: 強力粉">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">単価 (¥)</label>
+                        <input type="number" id="item-price" class="w-full bg-slate-50 border-none rounded-2xl p-4 outline-none" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">単位</label>
+                        <input type="text" id="item-unit" class="w-full bg-slate-50 border-none rounded-2xl p-4 outline-none" placeholder="kg">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">カテゴリ</label>
+                    <select id="item-category" class="w-full bg-slate-50 border-none rounded-2xl p-4 outline-none appearance-none">
+                        <option value="食材">食材</option>
+                        <option value="備品">備品</option>
+                        <option value="飲料">飲料</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="deleteItem()" id="btn-delete" class="hidden px-4 py-4 text-red-400 font-bold">削除</button>
+                <button onclick="saveItem()" class="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-200 active:scale-95 transition">保存する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-        // --- あなたのFirebase設定をここに貼り付けてください ---
+        // --- Firebase Config ---
         const firebaseConfig = {
   apiKey: "AIzaSyAIKfiw6uFGQOYGMbsmIuZClf8zvVw1sXI",
   authDomain: "jedining-ab069.firebaseapp.com",
@@ -76,68 +182,190 @@
   appId: "1:691552810598:web:69f9e70c8eba31198a5fa7",
   measurementId: "G-GP4DVVCYFC"
 };
-        // --------------------------------------------------
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
-        const collectionRef = collection(db, "items");
+        const appId = "jedining-store-v2";
 
-        const itemNameInput = document.getElementById('itemName');
-        const saveBtn = document.getElementById('saveBtn');
-        const itemList = document.getElementById('itemList');
-        const status = document.getElementById('status');
+        let user = null;
+        let items = [];
 
-        // 保存機能
-        saveBtn.onclick = async () => {
-            const name = itemNameInput.value.trim();
-            if (!name) return;
-            
-            saveBtn.disabled = true;
-            try {
-                await addDoc(collectionRef, {
-                    name: name,
-                    createdAt: serverTimestamp()
-                });
-                itemNameInput.value = "";
-            } catch (e) {
-                console.error(e);
-                alert("エラーが発生しました");
-            }
-            saveBtn.disabled = false;
-        };
-
-        // リアルタイム読み込み
-        onSnapshot(query(collectionRef), (snapshot) => {
-            itemList.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const li = document.createElement('li');
-                li.className = "p-3 bg-white border-b flex justify-between items-center animate-fade-in";
-                li.textContent = data.name;
-                itemList.appendChild(li);
-            });
-            status.classList.add('hidden');
-        }, (error) => {
-            status.textContent = "接続エラー: ルールの設定を確認してください";
-            status.classList.remove('hidden');
-        });
-
-        // 全画面切り替えロジック
-        const fsBtn = document.getElementById('fullscreenBtn');
-        fsBtn.onclick = () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(e => {
-                    alert(`全画面に切り替えられません: ${e.message}`);
-                });
+        // Auth
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                user = u;
+                document.getElementById('display-user-id').innerText = u.uid;
+                document.getElementById('status-badge').innerText = "クラウド同期中";
+                document.getElementById('status-badge').className = "bg-emerald-500 text-xs px-3 py-1 rounded-full border border-emerald-400";
+                initRealtimeSync();
             } else {
-                document.exitFullscreen();
+                signInAnonymously(auth);
+            }
+        });
+
+        // Realtime Sync
+        function initRealtimeSync() {
+            const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'inventory'));
+            onSnapshot(q, (snap) => {
+                items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderList();
+                document.getElementById('loader').classList.add('hidden');
+            });
+        }
+
+        // Actions
+        window.saveItem = async () => {
+            const id = document.getElementById('edit-id').value;
+            const data = {
+                name: document.getElementById('item-name').value,
+                price: Number(document.getElementById('item-price').value),
+                unit: document.getElementById('item-unit').value,
+                category: document.getElementById('item-category').value,
+                stock: id ? items.find(i => i.id === id).stock : 0,
+                updatedAt: Date.now()
+            };
+
+            if (!data.name) return;
+
+            if (id) {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', id), data);
+            } else {
+                await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'inventory'), data);
+            }
+            closeModal();
+        };
+
+        window.updateStock = async (id, delta) => {
+            const item = items.find(i => i.id === id);
+            const newStock = Math.max(0, (item.stock || 0) + delta);
+            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', id), { stock: newStock });
+        };
+
+        window.deleteItem = async () => {
+            const id = document.getElementById('edit-id').value;
+            if (id && confirm("削除しますか？")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', id));
+                closeModal();
             }
         };
 
-        // iOS等のホーム画面追加後にURLバーを隠すヒント
-        window.addEventListener("load", () => {
-            setTimeout(() => window.scrollTo(0, 1), 100);
-        });
+        function renderList() {
+            const container = document.getElementById('item-list');
+            if (items.length === 0) {
+                container.innerHTML = `<div class="text-center py-20 text-slate-300">商品がありません</div>`;
+                return;
+            }
+            container.innerHTML = items.sort((a,b) => b.updatedAt - a.updatedAt).map(item => `
+                <div class="bg-white p-5 rounded-[24px] shadow-sm border border-slate-50 flex justify-between items-center group active:bg-slate-50 transition">
+                    <div onclick="openModal('${item.id}')" class="flex-1 cursor-pointer">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[9px] font-black px-2 py-0.5 rounded bg-indigo-50 text-indigo-400 uppercase">${item.category}</span>
+                            <h3 class="font-bold text-slate-700">${item.name}</h3>
+                        </div>
+                        <p class="text-xs text-slate-400">¥${item.price.toLocaleString()} / ${item.unit}</p>
+                    </div>
+                    <div class="flex items-center bg-slate-100 rounded-2xl p-1 gap-1">
+                        <button onclick="updateStock('${item.id}', -1)" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition active:scale-90"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                        <span class="w-10 text-center font-black text-sm">${item.stock || 0}</span>
+                        <button onclick="updateStock('${item.id}', 1)" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        window.getItems = () => items;
+    </script>
+
+    <script>
+        // UI Helpers
+        function showView(view) {
+            ['inventory', 'cost', 'settings'].forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+                document.getElementById(`tab-${v}`).classList.remove('active-tab');
+                document.getElementById(`tab-${v}`).classList.add('text-slate-400');
+            });
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            document.getElementById(`tab-${view}`).classList.add('active-tab');
+            lucide.createIcons();
+        }
+
+        function openModal(id = null) {
+            const modal = document.getElementById('modal');
+            const delBtn = document.getElementById('btn-delete');
+            document.getElementById('edit-id').value = id || '';
+            document.getElementById('modal-title').innerText = id ? "商品の編集" : "商品の追加";
+            delBtn.classList.toggle('hidden', !id);
+
+            if (id) {
+                const items = window.getItems();
+                const item = items.find(i => i.id === id);
+                document.getElementById('item-name').value = item.name;
+                document.getElementById('item-price').value = item.price;
+                document.getElementById('item-unit').value = item.unit;
+                document.getElementById('item-category').value = item.category;
+            } else {
+                document.getElementById('item-name').value = '';
+                document.getElementById('item-price').value = '';
+                document.getElementById('item-unit').value = '';
+                document.getElementById('item-category').value = '食材';
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        // Recipe Logic
+        function addRecipeRow() {
+            const items = window.getItems();
+            const container = document.getElementById('recipe-items');
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center animate-in fade-in slide-in-from-top-2";
+            div.innerHTML = `
+                <select onchange="calculateTotal()" class="flex-1 bg-slate-50 border-none rounded-xl p-3 text-sm outline-none appearance-none">
+                    <option value="0">材料を選択...</option>
+                    ${items.map(i => `<option value="${i.price}">${i.name} (¥${i.price})</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" placeholder="数量" oninput="calculateTotal()" class="w-20 bg-slate-50 border-none rounded-xl p-3 text-sm outline-none">
+                <button onclick="this.parentElement.remove(); calculateTotal()" class="text-slate-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        function calculateTotal() {
+            const rows = document.getElementById('recipe-items').children;
+            let total = 0;
+            Array.from(rows).forEach(row => {
+                const price = Number(row.querySelector('select').value);
+                const qty = Number(row.querySelector('input').value);
+                total += (price * qty);
+            });
+            const sale = Number(document.getElementById('sale-price').value) || 1;
+            document.getElementById('total-cost').innerText = `¥${Math.round(total).toLocaleString()}`;
+            document.getElementById('cost-ratio').innerText = `${((total / sale) * 100).toFixed(1)}%`;
+        }
+
+        function exportCSV() {
+            const items = window.getItems();
+            let csv = "商品名,カテゴリ,価格,在庫\n";
+            items.forEach(i => {
+                csv += `${i.name},${i.category},${i.price},${i.stock}\n`;
+            });
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `JEDINING_Order_${new Date().toLocaleDateString()}.csv`;
+            a.click();
+        }
+
+        window.onload = () => lucide.createIcons();
     </script>
 </body>
 </html>
